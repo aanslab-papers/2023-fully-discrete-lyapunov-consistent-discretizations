@@ -76,7 +76,7 @@ The code provides various customization options that can be passed as command-li
 
      `-ts_rk_type`: choose the Runge-Kutta scheme.
 
-* Adaptivity
+   * Adaptivity
 
      `-ts_atol`: set the absolute tolerance for adaptivity.
 
@@ -84,9 +84,9 @@ The code provides various customization options that can be passed as command-li
 
      `-ts_adapt_type`: set the type of adaptivity.
 
-      `-ts_adapt_dt_min`: set the minimum time step size for adaptivity.
+     `-ts_adapt_dt_min`: set the minimum time step size for adaptivity.
 
-      `-ts_adapt_dt_max`: set the maximum time step size for adaptivity.
+     `-ts_adapt_dt_max`: set the maximum time step size for adaptivity.
 
 6. Monitoring
 
