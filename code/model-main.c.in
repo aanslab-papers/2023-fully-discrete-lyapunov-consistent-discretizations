@@ -1,0 +1,384 @@
+#ifndef HAVE_FIELDS
+#define HAVE_FIELDS 0
+#endif
+
+#ifndef HAVE_CONVERGENCE
+#define HAVE_CONVERGENCE 0
+#endif
+
+#ifndef HAVE_SOLUTION
+#define HAVE_SOLUTION 0
+#endif
+
+#ifndef HAVE_SOURCE
+#define HAVE_SOURCE 0
+#endif
+
+#ifndef HAVE_DIFFUSION
+#define HAVE_DIFFUSION 0
+#endif
+
+#if HAVE_SOLUTION == 0
+static ssdc_soln_fn *solution = NULL;
+#endif
+
+#if HAVE_DIFFUSION == 1
+#ifndef DIM
+#define DIM 2
+enum {dim = DIM};
+#endif
+#include "model-diff.c.in"
+#endif
+
+#if HAVE_DIFFUSION == 0
+enum {dim = 1};
+#define OPT_DEG "1"
+#define OPT_NEL "1"
+static ssdc_vflux_fn  *vflux   = NULL;
+static ssdc_vfluxn_fn *vfluxn  = NULL;
+static ssdc_wspeed_fn *wspeed  = NULL;
+static ssdc_vbc_fn    *vbc  = NULL;
+#endif
+
+#ifndef OPT_DEG
+#define OPT_DEG NULL
+#endif
+#ifndef OPT_NEL
+#define OPT_NEL NULL
+#endif
+#ifndef OPT_BOX
+#define OPT_BOX NULL
+#endif
+
+#include "model-grrk.c.in"
+
+typedef struct {
+  SSDC ssdc;
+} ContextM;
+
+// monitor the 2 norm of the right hand side
+PetscErrorCode RightHandSide(TS ts, PetscInt step,PetscReal t,Vec U, void *ctx){
+  ContextM *mctx = (ContextM*)ctx;
+  SSDC ssdc = mctx->ssdc;
+  MPI_Comm comm;
+  PetscErrorCode ierr;
+  Vec F;
+  PetscInt i;
+  ssdc_real_t prevt,dt;
+  ssdc_real_t normRHS[dof];
+
+  PetscFunctionBegin;
+  dt = 0;
+  if(step>0){
+    ierr = TSGetPrevTime(ts,&prevt);CHKERRQ(ierr);
+    dt = t-prevt;}
+  ierr = SSDCGetComm(ssdc,&comm);CHKERRQ(ierr);
+  ierr = SSDCGetWorkVec(ssdc,&F);CHKERRQ(ierr);
+  ierr = SSDCFormRHSFunction(ssdc,t,U,F);CHKERRQ(ierr);
+  ierr = VecSetBlockSize(F,dof);CHKERRQ(ierr);
+  ierr = VecPow(F,2);CHKERRQ(ierr);
+  ierr = SSDCIntegrateDomain(ssdc,F,normRHS);CHKERRQ(ierr);
+  for (i=0; i<dof; i++) normRHS[i] = PetscSqrtReal(normRHS[i]);
+  ierr = PetscPrintf(comm,"%d t %e dt %e ",(int)step,t,dt);CHKERRQ(ierr);
+  for (i=0; i<dof; i++) {
+      ierr = PetscPrintf(comm,"rhs(%d) %e ",(int)i,normRHS[i]);CHKERRQ(ierr);
+    }
+    ierr = PetscPrintf(comm,"\n");CHKERRQ(ierr);
+  ierr = SSDCRestoreVec(ssdc,&F);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+//Monitor RHS end
+
+// monitor the total cases
+PetscErrorCode Cases(TS ts, PetscInt step,PetscReal t,Vec U, void *ctx){
+  ContextM *mctx = (ContextM*)ctx;
+  SSDC ssdc = mctx->ssdc;
+  MPI_Comm comm;
+  PetscErrorCode ierr;
+  PetscInt i;
+  ssdc_real_t prevt,dt;
+  ssdc_real_t cases[dof];
+
+  PetscFunctionBegin;
+  dt = 0;
+  if(step>0){
+    ierr = TSGetPrevTime(ts,&prevt);CHKERRQ(ierr);
+    dt = t-prevt;}
+  ierr = SSDCGetComm(ssdc,&comm);CHKERRQ(ierr);
+  ierr = SSDCIntegrateDomain(ssdc,U,cases);CHKERRQ(ierr);
+  ierr = PetscPrintf(comm,"%d t %e dt %e ",(int)step,t,dt);CHKERRQ(ierr);
+  for (i=0; i<dof; i++) {
+      ierr = PetscPrintf(comm,"cases(%d) %e ",(int)i,cases[i]);CHKERRQ(ierr);
+    }
+    ierr = PetscPrintf(comm,"\n");CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+//Monitor Integral end
+
+// monitor the max cases
+PetscErrorCode MaxCases(TS ts, PetscInt step,PetscReal t,Vec U, void *ctx){
+  ContextM *mctx = (ContextM*)ctx;
+  SSDC ssdc = mctx->ssdc;
+  MPI_Comm comm;
+  PetscErrorCode ierr;
+  PetscInt i;
+  ssdc_real_t prevt,dt;
+  ssdc_real_t cases[dof];
+  Vec Zero;
+
+  PetscFunctionBegin;
+  dt = 0;
+  if(step>0){
+    ierr = TSGetPrevTime(ts,&prevt);CHKERRQ(ierr);
+    dt = t-prevt;}
+  ierr = SSDCGetComm(ssdc,&comm);CHKERRQ(ierr);
+  ierr = SSDCGetWorkVec(ssdc,&Zero);CHKERRQ(ierr);
+  ierr = VecSet(Zero,0);CHKERRQ(ierr);
+  ierr = SSDCComputeError(ssdc,U,Zero,NULL,NULL,NULL,cases);CHKERRQ(ierr);
+  ierr = SSDCRestoreVec(ssdc,&Zero);CHKERRQ(ierr);
+  ierr = PetscPrintf(comm,"%d t %e dt %e ",(int)step,t,dt);CHKERRQ(ierr);
+  for (i=0; i<dof; i++) {
+      ierr = PetscPrintf(comm,"cases(%d) %e ",(int)i,cases[i]);CHKERRQ(ierr);
+    }
+    ierr = PetscPrintf(comm,"\n");CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode SSDCMonitor_Entropy(SSDCMonitor mon,PetscReal Sval[],PETSC_UNUSED void *ctx)
+{
+  SSDC           ssdc;
+  Vec            U;
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  ierr = SSDCMonitorGetSSDC(mon,&ssdc);CHKERRQ(ierr);
+  ierr = SSDCMonitorGetVec(mon,&U);CHKERRQ(ierr);
+  ierr = SSDCComputeEntropy(ssdc,U,Sval);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode SSDCMonitor_Convergence(SSDCMonitor mon,PetscReal Sval[],PETSC_UNUSED void *ctx)
+{
+  SSDC           ssdc;
+  Vec            U,Ue;
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  ierr = SSDCMonitorGetSSDC(mon,&ssdc);CHKERRQ(ierr);
+  ierr = SSDCMonitorGetVec(mon,&U);CHKERRQ(ierr);
+  ierr = SSDCGetWorkVec(ssdc,&Ue);CHKERRQ(ierr);
+#if HAVE_CONVERGENCE
+  {
+    int i;
+    ssdc_real_t U_eq_e[dof];
+    convergence(U_eq_e);
+    for (i=0; i<dof; i++) {
+      ierr = VecStrideSet(Ue,i,U_eq_e[i]);CHKERRQ(ierr);
+    }
+  }
+#else
+  ierr = VecZeroEntries(Ue);CHKERRQ(ierr);
+#endif
+  ierr = SSDCComputeError(ssdc,U,Ue,NULL,NULL,Sval,NULL);CHKERRQ(ierr);
+  ierr = SSDCRestoreVec(ssdc,&Ue);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+int main(int argc, char *argv[])
+{
+  TS ts;
+  SSDC ssdc;
+  MPI_Comm comm;
+  PetscLogStage SetUpStage = 0;
+  PetscLogStage SolveStage = 0;
+  PetscErrorCode ierr;
+
+  ierr = PetscInitialize(&argc,&argv,NULL,NULL);CHKERRQ(ierr);
+  comm = PETSC_COMM_WORLD;
+  ierr = PetscLogStageRegister("SetUp",&SetUpStage);CHKERRQ(ierr);
+  ierr = PetscLogStageRegister("Solve",&SolveStage);CHKERRQ(ierr);
+
+  ierr = SSDCOptionsAlias("-deg", OPT_DEG, "-ssdc_deg");CHKERRQ(ierr);
+  ierr = SSDCOptionsAlias("-nel", OPT_NEL, "-ssdc_mesh_box_size");CHKERRQ(ierr);
+  ierr = SSDCOptionsAlias("-box", OPT_BOX, "-ssdc_mesh_box_bbox");CHKERRQ(ierr);
+
+  /* Create SSDC context */
+  ierr = SSDCCreate(comm,&ssdc);CHKERRQ(ierr);
+  ierr = SSDCSetDim(ssdc,dim);CHKERRQ(ierr);
+  ierr = SSDCSetDof(ssdc,dof);CHKERRQ(ierr);
+  ierr = SSDCSetName(ssdc,NAME);CHKERRQ(ierr);
+  ierr = SSDCSetFromOptions(ssdc);CHKERRQ(ierr);
+
+  /* SetUp SSDC context */
+  ierr = PetscLogStagePush(SetUpStage);CHKERRQ(ierr);
+  ierr = SSDCSetUp(ssdc);CHKERRQ(ierr);
+  ierr = PetscLogStagePop();CHKERRQ(ierr);
+
+  { /* Configure application */
+    SSDC_App app;
+    ierr = SSDCGetApp(ssdc,&app);CHKERRQ(ierr);
+    ierr = ModelInitialize();CHKERRQ(ierr);
+
+#if HAVE_FIELDS
+    app->field = fields;
+#endif
+
+    app->ctx = NULL;
+    app->dim = dim;
+    app->dof = dof;
+
+    app->conserved = NULL;
+    app->primitive = NULL;
+    app->entropy   = entropy;
+    app->primary   = NULL;
+
+    app->iflux  = NULL;
+    app->ifluxn = NULL;
+    app->ifluxs = NULL;
+    app->upwind = NULL;
+
+    app->vflux  = vflux;
+    app->vfluxn = vfluxn;
+    app->wspeed = wspeed;
+    app->ipterm = SSDCOptionReal("-ipterm", 1);
+
+    app->react  = reaction;
+
+#if HAVE_SOURCE
+    app->source = source;
+#endif
+  }
+
+  { /* Configure boundary conditions */
+    SSDC_Bnd bnd; int index,count; const int *marker;
+    ierr = SSDCGetBndMarkers(ssdc,&count,&marker);CHKERRQ(ierr);
+    for (index=0; index<count; index++) {
+      ierr = SSDCGetBnd(ssdc,marker[index],&bnd);CHKERRQ(ierr);
+      bnd->ctx = NULL;
+      bnd->ibc = NULL;
+      bnd->vbc = vbc;
+    }
+  }
+
+  /* Configure initial condition */
+  ierr = SSDCSetInitial(ssdc,initial,NULL);CHKERRQ(ierr);
+  ierr = SSDCSetSolution(ssdc,solution,NULL);CHKERRQ(ierr);
+
+  ierr = SSDCOptionsAlias("-state",      NULL, "-ssdc_monitor_state"      );CHKERRQ(ierr);
+  ierr = SSDCOptionsAlias("-draw",       NULL, "-ssdc_monitor_draw"       );CHKERRQ(ierr);
+  ierr = SSDCOptionsAlias("-vtk",        NULL, "-ssdc_monitor_vtk"        );CHKERRQ(ierr);
+  ierr = SSDCOptionsAlias("-glvis",      NULL, "-ssdc_monitor_glvis"      );CHKERRQ(ierr);
+  ierr = SSDCOptionsAlias("-glvis_dump", NULL, "-ssdc_monitor_glvis_dump" );CHKERRQ(ierr);
+  ierr = SSDCOptionsAlias("-catalyst",   NULL, "-ssdc_monitor_catalyst"   );CHKERRQ(ierr);
+  ierr = SSDCOptionsAlias("-lg_cfl",     NULL, "-ssdc_monitor_cfl"     );CHKERRQ(ierr);
+  ierr = SSDCOptionsAlias("-lg_error",   NULL, "-ssdc_monitor_error"   );CHKERRQ(ierr);
+  ierr = SSDCOptionsAlias("-lg_solnorm", NULL, "-ssdc_monitor_solnorm" );CHKERRQ(ierr);
+  ierr = SSDCOptionsAlias("-lg_rhsnorm", NULL, "-ssdc_monitor_rhsnorm" );CHKERRQ(ierr);
+  ierr = SSDCOptionsAlias("-lg_primary", NULL, "-ssdc_monitor_primary" );CHKERRQ(ierr);
+  ierr = SSDCOptionsAlias("-lg_entropy", NULL, "-ssdc_monitor_entropy" );CHKERRQ(ierr);
+
+  /* Create timestepper context */
+  ierr = SSDCCreateTS(ssdc,&ts);CHKERRQ(ierr);
+  ierr = TSSetExactFinalTime(ts,TS_EXACTFINALTIME_STEPOVER);CHKERRQ(ierr);
+  ierr = TSSetTolerances(ts,(PetscReal)1e-10,NULL,(PetscReal)1e-10,NULL);CHKERRQ(ierr);
+
+  PetscInt lgs = SSDCOptionInt("-lg_entropy",SSDCOptionName("-lg_entropy"));
+  if (lgs) {
+    SSDCMonitor mon;
+    ierr = SSDCMonitorCreateValue(&mon);CHKERRQ(ierr);
+    ierr = SSDCMonitorSetType(mon,NULL);CHKERRQ(ierr);
+    ierr = SSDCMonitorSetName(mon,"Lyapunov");CHKERRQ(ierr);
+    ierr = SSDCMonitorValueSetFunction(mon,1,SSDCMonitor_Entropy,NULL);CHKERRQ(ierr);
+    ierr = SSDCAppendMonitor(ssdc,mon);CHKERRQ(ierr);
+  }
+
+  PetscInt lgc = SSDCOptionInt("-lg_convergence",SSDCOptionName("-lg_convergence"));
+  if (lgc) {
+    SSDCMonitor mon;
+    ierr = SSDCMonitorCreateValue(&mon);CHKERRQ(ierr);
+    ierr = SSDCMonitorSetType(mon,NULL);CHKERRQ(ierr);
+    ierr = SSDCMonitorSetName(mon,"Convergence");CHKERRQ(ierr);
+    ierr = SSDCMonitorValueSetFunction(mon,dof,SSDCMonitor_Convergence,NULL);CHKERRQ(ierr);
+    ierr = SSDCAppendMonitor(ssdc,mon);CHKERRQ(ierr);
+  }
+
+  /* Basic timestepper configuration */
+  PetscReal Tf = SSDCOptionReal("-Tf", T_final);
+  PetscReal dt = SSDCOptionReal("-dt", 1.0e-6);
+  ierr = TSSetMaxTime (ts,Tf);CHKERRQ(ierr);
+  ierr = TSSetTimeStep(ts,dt);CHKERRQ(ierr);
+
+  /* Configure timestepper from command line */
+  ierr = TSSetFromOptions(ts);CHKERRQ(ierr);
+
+  PetscBool rrk = SSDCOptionBool("-rrk",PETSC_FALSE);
+  if (rrk) {ierr = TSSetUpRRK(ts);CHKERRQ(ierr);}
+
+  ContextM mctx;
+  //Monitor RHS
+  if (SSDCOptionBool("-rhs_monitor", PETSC_FALSE)) {
+    mctx.ssdc = ssdc;
+    ierr = TSMonitorSet(ts,RightHandSide,&mctx,NULL);CHKERRQ(ierr);
+  }
+
+  //Monitor RHS
+  if (SSDCOptionBool("-cases_monitor", PETSC_FALSE)) {
+    mctx.ssdc = ssdc;
+    ierr = TSMonitorSet(ts,Cases,&mctx,NULL);CHKERRQ(ierr);
+  }
+
+  //Monitor RHS
+  if (SSDCOptionBool("-max_cases_monitor", PETSC_FALSE)) {
+    mctx.ssdc = ssdc;
+    ierr = TSMonitorSet(ts,MaxCases,&mctx,NULL);CHKERRQ(ierr);
+  }
+
+  /* Solve */
+  ierr = PetscLogStagePush(SolveStage);CHKERRQ(ierr);
+  ierr = SSDCSolve(ssdc,ts);CHKERRQ(ierr);
+  ierr = PetscLogStagePop();CHKERRQ(ierr);
+
+#ifdef EQ
+  if (SSDCOptionBool("-eq",PETSC_FALSE)) {
+    equilibrium();
+  }
+#endif
+
+  if (SSDCOptionBool("-error",PETSC_FALSE)) {
+    PetscReal t; Vec U,Ue; int deg[2];
+    PetscReal errorL1[dof],errorL2[dof],errorMax[dof];
+    PetscReal errorL1All = 0, errorL2All = 0, errorMaxAll = 0;
+    ierr = TSGetSolveTime(ts,&t);CHKERRQ(ierr);
+    ierr = TSGetSolution(ts,&U);CHKERRQ(ierr);
+    ierr = SSDCGetWorkVec(ssdc,&Ue);CHKERRQ(ierr);
+    ierr = SSDCFormSolution(ssdc,solution,NULL,t,Ue);CHKERRQ(ierr);
+    ierr = SSDCComputeError(ssdc,U,Ue,NULL,errorL1,errorL2,errorMax);CHKERRQ(ierr);
+    ierr = SSDCRestoreVec(ssdc,&Ue);CHKERRQ(ierr);
+    ierr = SSDCGetDegRange(ssdc,&deg[0],&deg[1]);CHKERRQ(ierr);
+
+    for (int i=0; i<dof; i++) {
+      errorL1All  += PetscAbs(errorL1[i]);
+      errorL2All  += PetscSqr(errorL2[i]);
+      errorMaxAll += PetscMax(errorMax[i],errorMaxAll);
+    }
+    errorL2All = PetscSqrtReal(errorL2All);
+
+    ierr = PetscPrintf(comm,
+                       "Error[*] L1: %.5e L2: %.5e Max: %.5e [ dim=%d deg=%d:%d ]\n",
+                       (double)errorL1All,(double)errorL2All,(double)errorMaxAll,
+                       dim,deg[0],deg[1]);CHKERRQ(ierr);
+    for (int i=0; i<dof; i++) {
+      ierr = PetscPrintf(comm,
+                         "Error[%d] L1: %.5e L2: %.5e Max: %.5e [ dim=%d deg=%d:%d ]\n",
+                         i,(double)errorL1[i],(double)errorL2[i],(double)errorMax[i],
+                         dim,deg[0],deg[1]);CHKERRQ(ierr);
+    }
+  }
+
+  if (rrk) {ierr = TSResetRRK(ts);CHKERRQ(ierr);}
+
+  /* Cleanup */
+  ierr = TSDestroy(&ts);CHKERRQ(ierr);
+  ierr = SSDCDestroy(&ssdc);CHKERRQ(ierr);
+
+  ierr = PetscFinalize();CHKERRQ(ierr);
+  return 0;
+}

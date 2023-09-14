@@ -1,0 +1,72 @@
+static void vflux(const void *ctx,
+                  const ssdc_real_t A[],
+                  const ssdc_real_t U[],
+                  const ssdc_real_t G[],
+                  /* */ ssdc_real_t F[])
+{
+  /* */ ssdc_real_t  dUdW[dof];
+  const ssdc_real_t *gradW = G;
+  /* */ ssdc_real_t  gradU[dof][dim];
+  jacobian(U,dUdW);
+  for (int j=0; j<dof; j++)
+    for (int i=0; i<dim; i++)
+      gradU[j][i] = dUdW[j] * gradW[j*dim+i];
+  for (int j=0; j<dof; j++)
+    for (int i=0; i<dim; i++)
+      F[j*dim+i] = 0;
+  for (int j=0; j<dof; j++)
+    for (int k=0; k<dof; k++)
+      for (int i=0; i<dim; i++)
+        F[j*dim+i] += Cdiff[j][k] * gradU[k][i];
+}
+
+static void vfluxn(const void *ctx,
+                   const ssdc_real_t A[],
+                   const ssdc_real_t U[],
+                   const ssdc_real_t G[],
+                   const ssdc_real_t Sn[],
+                   /* */ ssdc_real_t Fn[])
+{
+  ssdc_real_t F[dof][dim];
+  vflux(ctx,A,U,G,&F[0][0]);
+  for (int j=0; j<dof; j++)
+    Fn[j] = 0;
+  for (int j=0; j<dof; j++)
+    for (int i=0; i<dim; i++)
+      Fn[j] += F[j][i]*Sn[i];
+}
+
+static void wspeed(const void *ctx,
+                   const ssdc_real_t A[],
+                   const ssdc_real_t U[],
+                   /* */ ssdc_real_t v[],
+                   /* */ ssdc_real_t *c,
+                   /* */ ssdc_real_t *d)
+{
+  ssdc_real_t dmax = 0;
+  for (int i=0; i<dof; i++)
+    for (int j=0; j<dof; j++)
+      dmax = PetscMax(dmax,Cdiff[i][j]);
+  *d = dmax;
+}
+
+static void vbc(const void *ctx,
+                const ssdc_real_t t,
+                const ssdc_real_t x[],
+                const ssdc_real_t Sn[],
+                const ssdc_real_t A[],
+                /* */ ssdc_real_t U[],
+                /* */ ssdc_real_t G[],
+                /* */ ssdc_real_t fVn[])
+{
+#if HAVE_SOLUTION
+  ssdc_real_t  Ub[dof];
+  solution(ctx,t,x,Ub);
+  for (int j=0;j<dof;j++)
+    U[j] = -U[j] + 2*Ub[j];
+#else
+  for (int j=0; j<dof; j++)
+    for (int i=0; i<dim; i++)
+      G[j*dim+i] = -G[j*dim+i];
+#endif
+}

@@ -1,0 +1,404 @@
+static void evalEntropy(const void *ctx,
+                        const ssdc_real_t t,
+                        const ssdc_real_t x[],
+                        const ssdc_real_t V[],
+                        /* */ ssdc_real_t *Sval)
+{
+  (void)t; (void)x; /* unused */
+  lyapunov(ctx,V,x,Sval);
+}
+
+static PetscErrorCode SSDCComputeEntropy(SSDC ssdc,Vec U,PetscReal *Sval)
+{
+  SSDC_App       app;
+  Vec            S,V=U;
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  ierr = SSDCGetApp(ssdc,&app);CHKERRQ(ierr);
+  if (app->primitive) {
+    ierr = SSDCGetWorkVec(ssdc,&V);CHKERRQ(ierr);
+    ierr = SSDCConvert(ssdc,app->primitive,app->ctx,U,V);CHKERRQ(ierr);
+  }
+  ierr = SSDCGetWorkVecBS(ssdc,1,&S);CHKERRQ(ierr);
+  ierr = SSDCEvaluateDomain1(ssdc,evalEntropy,NULL,0,V,S);CHKERRQ(ierr);
+  ierr = SSDCIntegrateDomain(ssdc,S,Sval);CHKERRQ(ierr);
+  ierr = SSDCRestoreVecBS(ssdc,&S);CHKERRQ(ierr);
+  if (V != U) {ierr = SSDCRestoreVec(ssdc,&V);CHKERRQ(ierr);}
+  PetscFunctionReturn(0);
+}
+
+static void evalEntropyDot(const void *ctx,
+                           const ssdc_real_t t,
+                           const ssdc_real_t x[],
+                           const ssdc_real_t W[],
+                           const ssdc_real_t F[],
+                           /* */ ssdc_real_t *Sdot)
+{
+  int j; const int dof = *(int*)ctx;
+  (void)t; (void)x; /* unused */
+  *Sdot = 0;
+  for (j=0; j<dof; j++)
+    *Sdot += W[j]*F[j];
+}
+
+static PetscErrorCode SSDCComputeEntropyDot(SSDC ssdc,Vec U,Vec F,PetscReal *Sdot)
+{
+  SSDC_App       app;
+  int            dof;
+  Vec            S,V=U,W=U;
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  ierr = SSDCGetApp(ssdc,&app);CHKERRQ(ierr);
+  if (app->primitive) {
+    ierr = SSDCGetWorkVec(ssdc,&V);CHKERRQ(ierr);
+    ierr = SSDCConvert(ssdc,app->primitive,app->ctx,U,V);CHKERRQ(ierr);
+  }
+  if (app->entropy) {
+    ierr = SSDCGetWorkVec(ssdc,&W);CHKERRQ(ierr);
+    ierr = SSDCConvert(ssdc,app->entropy,app->ctx,V,W);CHKERRQ(ierr);
+  }
+  ierr = SSDCGetDof(ssdc,&dof);CHKERRQ(ierr);
+  ierr = SSDCGetWorkVecBS(ssdc,1,&S);CHKERRQ(ierr);
+  ierr = SSDCEvaluateDomain2(ssdc,evalEntropyDot,&dof,0,W,F,S);CHKERRQ(ierr);
+  ierr = SSDCIntegrateDomain(ssdc,S,Sdot);CHKERRQ(ierr);
+  ierr = SSDCRestoreVecBS(ssdc,&S);CHKERRQ(ierr);
+  if (V != U) {ierr = SSDCRestoreVec(ssdc,&V);CHKERRQ(ierr);}
+  if (W != U) {ierr = SSDCRestoreVec(ssdc,&W);CHKERRQ(ierr);}
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode EntropyFn(TS ts,Vec U,PetscReal *Sval)
+{
+  SSDC           ssdc;
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  ierr = PetscObjectQuery((PetscObject)ts,"SSDC",(PetscObject*)&ssdc);CHKERRQ(ierr);
+  ierr = SSDCComputeEntropy(ssdc,U,Sval);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+PetscErrorCode EntropyDotFn(TS ts,Vec U,Vec F,PetscReal *Sdot)
+{
+  SSDC           ssdc;
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  ierr = PetscObjectQuery((PetscObject)ts,"SSDC",(PetscObject*)&ssdc);CHKERRQ(ierr);
+  ierr = SSDCComputeEntropyDot(ssdc,U,F,Sdot);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+typedef struct {
+  PetscReal gamma;
+  PetscReal S0,dS;
+  Vec       vecsol;
+  Vec       update;
+  Vec       work;
+  TS        ts;
+} RRK;
+
+static PetscErrorCode Eta(PetscReal gamma,void *ctx,PetscReal *eta)
+{
+  RRK       *rrk = (RRK*)ctx;
+  TS        ts   = rrk->ts;
+  Vec       U    = rrk->vecsol;
+  Vec       dU   = rrk->update;
+  Vec       work = rrk->work;
+  PetscReal S0   = rrk->S0;
+  PetscReal dS   = rrk->dS;
+  PetscReal S    = 0;
+
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  ierr = VecWAXPY(work,gamma,dU,U);CHKERRQ(ierr);
+  ierr = EntropyFn(ts,work,&S);CHKERRQ(ierr);
+  *eta = S - S0 - gamma * dS;
+  PetscFunctionReturn(0);
+}
+
+typedef PetscErrorCode (*Function)(PetscReal,void*,PetscReal*);
+
+PETSC_UNUSED
+static PetscErrorCode Bisect(Function function,void *ctx,
+                             PetscReal xa,PetscReal xb,
+                             PetscReal atol,PetscReal rtol,
+                             PetscReal *x)
+{
+  PetscInt  BinaryDigits = (PetscInt)PetscCeilReal(-Log(PETSC_MACHINE_EPSILON)/Log(2));
+  PetscInt  maxit = BinaryDigits, it;
+  PetscReal dm,xm,fm,fa,fb;
+
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  ierr = function(xa,ctx,&fa);CHKERRQ(ierr);
+  ierr = function(xb,ctx,&fb);CHKERRQ(ierr);
+
+  // if (PetscAbsReal(fa) < atol) {*x = xa; PetscFunctionReturn(0);}
+  // if (PetscAbsReal(fb) < atol) {*x = xb; PetscFunctionReturn(0);}
+  if (fa*fb > atol) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_USER,"f(a)*f(b) > 0 - f(a)=%g f(b)=%g",fa,fb);
+  if (fa == 0) {*x = xa; PetscFunctionReturn(0);}
+  if (fb == 0) {*x = xb; PetscFunctionReturn(0);}
+  dm = xb - xa;
+  for (it=0; it<maxit; it++) {
+    dm /= 2; xm = xa + dm; fm = 0;
+    ierr = function(xm,ctx,&fm);CHKERRQ(ierr);
+    if (fm*fa >= 0) xa = xm;
+    if (fm == 0 || PetscAbsReal(dm) < atol + rtol*PetscAbsReal(xm))
+      {*x = xm; PetscFunctionReturn(0);}
+  }
+  *x = xa;
+  if (it == maxit) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_USER,"Not converged in %d iterations",(int)maxit);
+  PetscFunctionReturn(0);
+}
+
+static inline PetscBool isapproxtol(PetscReal x,PetscReal y,PetscReal atol,PetscReal rtol)
+{
+  return PetscAbsReal(x-y) <= PetscMax(atol, rtol*PetscMax(PetscAbsReal(x), PetscAbsReal(y)));
+}
+
+static inline PetscBool isapproxzero(PetscReal x)
+{
+  const PetscReal atol=PETSC_MACHINE_EPSILON, rtol=PETSC_SQRT_MACHINE_EPSILON;
+
+  return isapproxtol(x,0,atol,rtol);
+}
+
+PETSC_UNUSED
+static PetscErrorCode Brentq(Function function,void *ctx,
+                             PetscReal xa,PetscReal xb,
+                             PetscReal xtol,PetscReal rtol,
+                             PetscReal *x)
+{
+  /*
+    Brent's algorithm using inverse quadratic extrapolation, see
+      R. P. Brent. Algorithms for Minimization Without Derivatives.
+      Series in Automatic Computation.
+      Englewood Cliffs, New Jersey: Prentice-Hall, Inc., 1973.
+    Ported from scipy,
+      https://github.com/scipy/scipy/blob/adc4f4f7bab120ccfab9383aba272954a0a12fb0/scipy/optimize/Zeros/brentq.c#L36-L130
+ */
+  PetscInt  BinaryDigits = (PetscInt)PetscCeilReal(-PetscLogReal(PETSC_MACHINE_EPSILON)/PetscLogReal(2));
+  PetscInt  maxit = BinaryDigits, it;
+  PetscReal xm=0;
+  PetscReal fa,fb,fm=0;
+  PetscReal sa=0,sb=0,sbis;
+  PetscReal delta,stry,da,dm;
+
+  PetscErrorCode ierr;
+  PetscFunctionBegin;
+  ierr = function(xa,ctx,&fa);CHKERRQ(ierr);
+  ierr = function(xb,ctx,&fb);CHKERRQ(ierr);
+
+  // if (PetscAbsReal(fa) < xtol) {*x = xa; PetscFunctionReturn(0);}
+  // if (PetscAbsReal(fb) < xtol) {*x = xb; PetscFunctionReturn(0);}
+  if (fa*fb > 0) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_USER,"f(a)*f(b) > 0 - f(a)=%g f(b)=%g",fa,fb);
+  if (fa == 0) {*x = xa; PetscFunctionReturn(0);}
+  if (fb == 0) {*x = xb; PetscFunctionReturn(0);}
+
+  for (it=0; it<maxit; it++) {
+    if (fa*fb < 0) {
+      xm = xa;
+      fm = fa;
+      sa = sb = xb - xa;
+    }
+    if (PetscAbsReal(fm) < PetscAbsReal(fb)) {
+      xa = xb;
+      xb = xm;
+      xm = xa;
+
+      fa = fb;
+      fb = fm;
+      fm = fa;
+    }
+
+    delta = (xtol + rtol*PetscAbsReal(xb))/2;
+    sbis = (xm - xb)/2;
+    if (isapproxzero(fb) || PetscAbsReal(sbis) < delta) {
+      break;
+    }
+
+    if (PetscAbsReal(sa) > delta && PetscAbsReal(fb) < PetscAbsReal(fa)) {
+      if (xa == xm) {
+        /* interpolate */
+        stry = -fb*(xb - xa)/(fb - fa);
+      }
+      else {
+        /* extrapolate */
+        da = (fa - fb)/(xa - xb);
+        dm = (fm - fb)/(xm - xb);
+        stry = -fb*(fm*dm - fa*da)/(dm*da*(fm - fa));
+      }
+      if (2*PetscAbsReal(stry) < PetscMin(PetscAbsReal(sa), 3*PetscAbsReal(sbis) - delta)) {
+        /* good short step */
+        sa = sb;
+        sb = stry;
+      } else {
+        /* bisect */
+        sa = sbis;
+        sb = sbis;
+      }
+    }
+    else {
+      /* bisect */
+      sa = sbis;
+      sb = sbis;
+    }
+
+    xa = xb; fa = fb;
+    if (PetscAbsReal(sb) > delta) {
+      xb += sb;
+    }
+    else {
+      xb += (sbis > 0 ? delta : -delta);
+    }
+
+    ierr = function(xb,ctx,&fb);CHKERRQ(ierr);
+  }
+  *x = xb;
+  if (it == maxit) SETERRQ(PETSC_COMM_SELF,PETSC_ERR_USER,"Brentq: Not converged in %d iterations.\n  xa = %+.16e\n  fa = %+.16e\n  xb = %+.16e\n  fb = %+.16e",(int)maxit,(double)xa,(double)fa,(double)xb,(double)fb);
+  PetscFunctionReturn(0);
+}
+
+enum solver {
+  bisect=0,
+  brentq=1,
+};
+
+#include <petsc/private/tsimpl.h>
+#include <petsc/../../src/ts/impls/explicit/rk/rk.h>
+
+static PetscErrorCode RRK_PreStep(TS ts)
+{
+  RRK            *rrk;
+  Vec            U;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = TSGetApplicationContext(ts,&rrk);CHKERRQ(ierr);
+  ierr = TSGetSolution(ts,&U);CHKERRQ(ierr);
+  if (!rrk->ts) {
+    rrk->ts = ts;
+    rrk->gamma = 1;
+    ierr = VecDuplicate(U,&rrk->vecsol);CHKERRQ(ierr);
+    ierr = VecDuplicate(U,&rrk->update);CHKERRQ(ierr);
+    ierr = VecDuplicate(U,&rrk->work);CHKERRQ(ierr);
+  }
+  ierr = VecCopy(U,rrk->vecsol);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode RRK_PostStep(TS ts)
+{
+  TS_RK             *rk   = (TS_RK*)ts->data;
+  Vec               *Y    = rk->Y;
+  Vec               *Ydot = rk->YdotRHS;
+  PetscInt          s,j;
+  const PetscReal   *b;
+
+  RRK               *rrk = (RRK*)ts->user;
+  Vec               U    = rrk->vecsol;
+  Vec               dU   = rrk->update;
+
+  PetscReal         time, time_prev;
+  PetscErrorCode    ierr;
+
+  PetscFunctionBegin;
+  ierr = TSGetTime(ts, &time);CHKERRQ(ierr);
+  ierr = TSGetPrevTime(ts, &time_prev);CHKERRQ(ierr);
+  ierr = TSRKGetTableau(ts,&s,NULL,&b,NULL,NULL,NULL,NULL,NULL);CHKERRQ(ierr);
+
+  { /* Initialize */
+    PetscReal h = time - time_prev, Sdot;
+    ierr = VecWAXPY(dU,(PetscReal)-1,U,ts->vec_sol);
+    ierr = EntropyFn(ts,U,&rrk->S0);CHKERRQ(ierr);
+    rrk->dS = 0;
+    for (j=0; j<s; j++) {
+      ierr = EntropyDotFn(ts,Y[j],Ydot[j],&Sdot);CHKERRQ(ierr);
+      rrk->dS += h * b[j] * Sdot;
+    }
+  }
+
+  { /* Solve */
+    PetscReal d = PetscRealConstant(0.5);
+    PetscReal a = rrk->gamma - d;
+    PetscReal b = rrk->gamma + d;
+    PetscReal atol = 1000 * PETSC_MACHINE_EPSILON;
+    PetscReal rtol = 0;
+    int sol = SSDCOptionInt("-rrk_solver", bisect);
+    switch (sol)
+    {
+    case bisect:
+      ierr = Bisect(Eta,rrk,a,b,atol,rtol,&rrk->gamma);CHKERRQ(ierr);
+      break;
+
+    case brentq:
+      ierr = Brentq(Eta,rrk,a,b,atol,rtol,&rrk->gamma);CHKERRQ(ierr);
+      break;
+    
+    default:
+      break;
+    }
+  }
+
+  { /* Update time and solution */
+    PetscReal time_next = time_prev + rrk->gamma * (time - time_prev);
+    ierr = TSSetTime(ts,time_next);CHKERRQ(ierr);
+    ierr = VecWAXPY(ts->vec_sol,rrk->gamma,dU,U);CHKERRQ(ierr);
+  }
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode RRK_Monitor(TS ts,PetscInt n, PetscReal t, Vec U, void *ctx)
+{
+  SSDC           ssdc;
+  Vec            F;
+  PetscReal      S,Sdot;
+  PetscViewer    viewer;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  if (!SSDCOptionBool("-rrk_monitor",PETSC_FALSE)) PetscFunctionReturn(0);
+  ierr = PetscObjectQuery((PetscObject)ts,"SSDC",(PetscObject*)&ssdc);CHKERRQ(ierr);
+
+  ierr = SSDCGetWorkVec(ssdc,&F);CHKERRQ(ierr);
+  ierr = SSDCFormRHSFunction(ssdc,t,U,F);CHKERRQ(ierr);
+  ierr = EntropyFn(ts,U,&S);CHKERRQ(ierr);
+  ierr = EntropyDotFn(ts,U,F,&Sdot);CHKERRQ(ierr);
+  ierr = SSDCRestoreVec(ssdc,&F);CHKERRQ(ierr);
+
+  viewer = PETSC_VIEWER_STDOUT_(PetscObjectComm((PetscObject)ts));
+  ierr = PetscViewerASCIIPrintf(viewer,"RRK time=%.16e lyap=%.16e dlyapdt=%.16e\n",(double)t,(double)S,(double)Sdot);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode TSSetUpRRK(TS ts)
+{
+  RRK            *rrk;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = PetscNew(&rrk);CHKERRQ(ierr);
+  rrk->gamma = 1;
+  ierr = TSSetApplicationContext(ts,rrk);CHKERRQ(ierr);
+  ierr = TSSetPreStep (ts,RRK_PreStep);CHKERRQ(ierr);
+  ierr = TSSetPostStep(ts,RRK_PostStep);CHKERRQ(ierr);
+  ierr = TSMonitorSet(ts,RRK_Monitor,NULL,NULL);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}
+
+static PetscErrorCode TSResetRRK(TS ts)
+{
+  RRK            *rrk;
+  PetscErrorCode ierr;
+
+  PetscFunctionBegin;
+  ierr = TSGetApplicationContext(ts,&rrk);CHKERRQ(ierr);
+  if (!rrk) PetscFunctionReturn(0);
+  ierr = TSSetApplicationContext(ts,NULL);CHKERRQ(ierr);
+  ierr = TSSetPreStep (ts,NULL);CHKERRQ(ierr);
+  ierr = TSSetPostStep(ts,NULL);CHKERRQ(ierr);
+  ierr = VecDestroy(&rrk->vecsol);CHKERRQ(ierr);
+  ierr = VecDestroy(&rrk->update);CHKERRQ(ierr);
+  ierr = VecDestroy(&rrk->work);CHKERRQ(ierr);
+  ierr = PetscFree(rrk);CHKERRQ(ierr);
+  PetscFunctionReturn(0);
+}

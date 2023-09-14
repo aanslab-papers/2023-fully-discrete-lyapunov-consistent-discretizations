@@ -1,0 +1,27 @@
+# ./model-pde-m1virus.bin -options_file m1virus-D1.yml
+
+
+deg: 2
+nel: 32
+
+ssdc:
+
+  name: m1virus
+
+ssdc:
+  save:
+    grid: "{name}-grid.dat"
+    step: "{name}-step-{step}.dat"
+
+      
+  monitor:
+    step: 
+      frequency: 50
+
+ts:
+  max_time: 400
+  # dt: 1e-12
+  rk:
+    type: 6vr
+  adapt:
+    type: dsp
