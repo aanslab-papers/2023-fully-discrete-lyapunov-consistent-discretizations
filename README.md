@@ -4,7 +4,7 @@
 
 The fully-discrete Lyapunov consistent discretizations are designed for systems of parabolic reaction-diffusion equations. These discretizations preserve the stability of the equilibrium points of the continuous partial differential equations. The spatial discretization is based on summation-by-parts operators and simultaneous approximation terms for unstructured grids, while the temporal integration relies on relaxation Runge-Kutta methods. The discretizations are arbitrarily high-order accurate in space and time and can be used with h- and p-refinements. The algorithms have been successfully applied to epidemiology compartmental models for disease transmission and an oncolytic M1 virotherapy model. The source codes to simulate the susceptible–infected (SI) PDE model, susceptible-exposed-infectious (SEI) PDE model, and the Oncolytic M1 virotherapy PDE model reported in the manuscript can be found in this repository.
 
-In the following, we guide the command line options for utilizing the SSDC library integrated with PETSc to execute the codes. Users can leverage these options to customize various aspects such as mesh handling, visualization, time stepping, adaptivity, and monitoring.
+In the following, we provide the command line options of the SSDC library integrated with PETSc to execute the codes. Users can leverage these options to customize various aspects such as mesh handling, visualization, time stepping, adaptivity, and monitoring.
 
 # Code Execution
 
@@ -28,7 +28,7 @@ To run the codes, follow the steps below:
 
 ## 🎨 Plotting the Data
 
-After generating the data, you can plot the resulting figures using an IPython Notebook. To install all the necessary packages, execute the bash script `create-venv.sh`. This script will create a Python virtual environment and set up the required dependencies for plotting the figures in the notebook.
+After generating the data, you can reproduce the figures of the manuscript using an IPython Notebook. To install all the necessary packages, execute the bash script `create-venv.sh`. This script will create a Python virtual environment and set up the required dependencies for plotting the figures in the notebook.
 
 ## 🔧  Customization Options
 
@@ -38,9 +38,9 @@ The code provides various customization options that can be passed as command-li
 
 `-ssdc_name`: assign a name to the SSDC object.
 
-`-ssdc_view`: view SSDC context.
+`-ssdc_view`: view the SSDC context.
 
-`-ssdc_deg`: specify the degree of the solution, OptionsAlias ```-deg```.
+`-ssdc_deg`: specify the solution polynomial degree, OptionsAlias ```-deg```.
 
 2.  Builtin box mesh generator
 
@@ -55,7 +55,7 @@ The code provides various customization options that can be passed as command-li
 
 3. Reading external meshes
 
-`-ssdc_mesh_read`: read mesh from file, OptionsAlias ```-read```.
+`-ssdc_mesh_read`: read a mesh from file, OptionsAlias ```-read```.
 
 
 4. Uniform refinement
@@ -106,17 +106,17 @@ The code provides various customization options that can be passed as command-li
 
 6. Monitoring
 
-`-ts_monitor`: enable time stepping monitoring.
+`-ts_monitor`: enable the time stepping monitoring.
 
 `-ts_adapt_monitor`: enable adaptivity monitoring.
 
 `-ssdc_monitor_info`: monitor general information.
 
-`-ssdc_monitor_step`: monitor step information.
+`-ssdc_monitor_step`: monitor the step information.
 
-`-ssdc_monitor_vtk`: monitor VTK output.
+`-ssdc_monitor_vtk`: monitor the VTK output.
 
-`-ssdc_monitor_dt`: monitor time step size.
+`-ssdc_monitor_dt`: monitor the time step size.
 
 
 7. Specific Options
@@ -127,6 +127,6 @@ The code provides various customization options that can be passed as command-li
 
 `-eq`: print the equilibrium value.
 
-`-max_cases_monitor`: print temporal evolution of the maximum norm of the solution.
+`-max_cases_monitor`: print the temporal evolution of the maximum norm of the solution.
 
-`-rrk_monitor`: print evolution of the Lyapunov functional and its time derivative.
+`-rrk_monitor`: print the evolution of the Lyapunov functional and its time derivative.
