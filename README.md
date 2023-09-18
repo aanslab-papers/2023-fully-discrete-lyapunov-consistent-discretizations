@@ -10,11 +10,27 @@ In the following, we guide the command line options for utilizing the SSDC libra
 
 To run the codes, follow the steps below:
 
-##  Run the Code
+## 🤖 Run the Code
 * Execute the command ```make run ``` to run all the codes (Susceptible–infected (SI) PDE model, Susceptible-exposed-infectious (SEI) PDE model, and Oncolytic M1 virotherapy PDE model).
 * You can pass additional options to customize the behavior of the code. Refer to the options listed in the available customization options section.
 
-## Customization Options
+### 💡 To run this code in a stand-alone mode:
+
+```./name-of-the-application.bin SSDC-options or YAML file containing SSDC-options``` 
+
+🗒️ **Example 1:** 
+
+```./model-pde-m1virus.bin -nel 32 -deg 2 -case 1 -ts_max_time 400  -rrk 1 -rrk_solver 0 -ts_adapt_dt_max 1e-10  -rrk_monitor```
+
+🗒️🗒️ **Example 2:**
+
+```./model-pde-m1virus.bin -options_file m1virus-D1.yml```
+
+## 🎨 Plotting the Data
+
+After generating the data, you can plot the resulting figures using an IPython Notebook. To install all the necessary packages, execute the bash script `create-venv.sh`. This script will create a Python virtual environment and set up the required dependencies for plotting the figures in the notebook.
+
+## 🔧  Customization Options
 
 The code provides various customization options that can be passed as command-line arguments. Below are the available options categorized according to their functionality:
 
@@ -114,4 +130,3 @@ The code provides various customization options that can be passed as command-li
 `-max_cases_monitor`: print temporal evolution of the maximum norm of the solution.
 
 `-rrk_monitor`: print evolution of the Lyapunov functional and its time derivative.
-
