@@ -14,7 +14,7 @@ To run the codes, follow the steps below:
 * Execute the command ```make run ``` to run all the codes (Susceptible–infected (SI) PDE model, Susceptible-exposed-infectious (SEI) PDE model, and Oncolytic M1 virotherapy PDE model).
 * You can pass additional options to customize the behavior of the code. Refer to the options listed in the available customization options section.
 
-### 💡 To run this code in a stand-alone mode:
+### 🤓 To run this code in a stand-alone mode:
 
 ```./name-of-the-application.bin SSDC-options or YAML file containing SSDC-options``` 
 
@@ -130,3 +130,11 @@ The code provides various customization options that can be passed as command-li
 `-max_cases_monitor`: print the temporal evolution of the maximum norm of the solution.
 
 `-rrk_monitor`: print the evolution of the Lyapunov functional and its time derivative.
+
+# 💡 **Notice:**
+
+The SSDC library is a proprietary software package. The library is the intellectual property of King Abdullah University of Science and Technology (KAUST) and is owned by the institution. It is licensed and developed with several industry partners. Therefore, it cannot be shared, copied, or distributed.
+
+However, as part of the manuscript review process, we have provided you with the source codes and binary codes required to simulate the susceptible–infected (SI) PDE model, the susceptible-exposed-infectious (SEI) PDE model, and the oncolytic M1 virotherapy PDE model reported in the manuscript.
+
+These shared codes allow you to reproduce the simulations. Users have the freedom to customize various aspects of the library by utilizing the available SSDC library options. These options enable you to adjust the dimensionality of the problem (1D, 2D, or 3D), configure the mesh, define time-stepping approaches, use adaptivity, visualize the results, and monitor the simulation progress.
