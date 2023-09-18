@@ -1,6 +1,10 @@
 #!/bin/bash
 set -euo pipefail
 
+#-----------------------------------------------------------------------------
+# Notice:we share this bash script to demonstrate how the codes are compiled.
+#-----------------------------------------------------------------------------
+
 #rpm -qi glibc-static libgfortran-static
 cd $(realpath -- $(dirname -- "$BASH_SOURCE"))
 
@@ -38,6 +42,8 @@ if [ ! -f $PETSC_DIR/$PETSC_ARCH/lib/libpetsc.a ]; then
 fi
 
 # Build SSDC
+# SSDC library is a proprietary software package.Therefore, it cannot be shared, copied, or distributed.
+
 export SSDC_DIR=$ROOT/ssdc.git
 export SSDC_ARCH=$PETSC_ARCH
 if [ ! -d $SSDC_DIR ]; then
