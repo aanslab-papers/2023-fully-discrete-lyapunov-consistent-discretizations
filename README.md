@@ -133,8 +133,8 @@ The code provides various customization options that can be passed as command-li
 
 # 💡 **Notice:**
 
-The SSDC library is a proprietary software package. The library is the intellectual property of King Abdullah University of Science and Technology (KAUST) and is owned by the institution. It is licensed and developed with several industry partners. Therefore, it cannot be shared, copied, or distributed.
+The SSDC library is a proprietary software package. The library is the intellectual property of King Abdullah University of Science and Technology (KAUST) and is owned by the institution. It is licensed and developed in collaboration with several industry partners. Therefore, it cannot be shared, copied, or distributed.
 
 However, as part of the manuscript review process, we have provided you with the source codes and binary codes required to simulate the susceptible–infected (SI) PDE model, the susceptible-exposed-infectious (SEI) PDE model, and the oncolytic M1 virotherapy PDE model reported in the manuscript.
 
-These shared codes allow you to reproduce the simulations. Users have the freedom to customize various aspects of the library by utilizing the available SSDC library options. These options enable you to adjust the dimensionality of the problem (1D, 2D, or 3D), configure the mesh, define time-stepping approaches, use adaptivity, visualize the results, and monitor the simulation progress.
+Users can customize various aspects of the library by utilizing the available SSDC library options. These options enable you to adjust the problem's dimensionality (1D, 2D, or 3D), configure the mesh, define time-stepping approaches, use adaptivity, visualize the results, and monitor the simulation progress.
