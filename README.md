@@ -135,7 +135,7 @@ The code provides various customization options that can be passed as command-li
 
 # 💡 **Notice:**
 
-Please note that the bash script ```build-drivers.sh``` demonstrates the compilation process for the PETSc and SSDC libraries and the drivers. It is important to mention that the SSDC library is proprietary and cannot be shared or recompiled by users.
+Please note that the bash script ```build-drivers.sh``` demonstrates the compilation process for the PETSc and SSDC libraries and the drivers. It is important to mention that the SSDC library is proprietary and cannot be shared or recompiled.
 
 However, by using the shared codes in this repository, you will be able to reproduce simulations and explore the capabilities of the SSDC library. While you cannot modify or recompile the SSDC library itself or the source codes, you have the freedom to customize various aspects of the codes using the available SSDC library options.
 
