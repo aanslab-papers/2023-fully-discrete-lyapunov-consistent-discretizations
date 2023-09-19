@@ -8,6 +8,8 @@ In the following, we provide the command line options of the SSDC library integr
 
 # Code Execution
 
+> *Note:* The binary codes work on Linux machines, specifically Ubuntu and Fedora, that are equipped with Intel processors.
+
 To run the codes, follow the steps below:
 
 ## 🤖 Run the Code
