@@ -46,8 +46,6 @@ The code provides various customization options that can be passed as command-li
 
 2.  Builtin box mesh generator
 
-`-ssdc_mesh_box_dim`: number of space dimensions, OptionsAlias ```-dim```.
-
 `-ssdc_mesh_box_size`: number of cells per direction, OptionsAlias ```-nel```.
 
 `-ssdc_mesh_box_wrap`: periodicity per direction, OptionsAlias ```-W```.
@@ -140,11 +138,11 @@ Please note that the bash script ```build-drivers.sh``` demonstrates the compila
 However, by using the shared codes in this repository, you will be able to reproduce simulations and explore the capabilities of the SSDC library. While you cannot modify or recompile the SSDC library itself or the source codes, you have the freedom to customize various aspects of the codes using the available SSDC library options.
 
 These options allow you to:
-1. Adjust the dimensionality of the problem (1D, 2D, or 3D).
-2. Configure the mesh according to your specific requirements.
-3. Define time-stepping methods.
-4. Utilize adaptivity techniques.
-5. Visualize the results of your simulations.
-6. Monitor the simulation.
+
+1. Configure the mesh according to your specific requirements.
+2. Define time-stepping methods.
+3. Utilize adaptivity techniques.
+4. Visualize the results of your simulations.
+5. Monitor the simulation.
 
 By leveraging these options, you can tailor the behavior of the SSDC library to suit your needs and explore its full potential while working with the provided shared codes.
