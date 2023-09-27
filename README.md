@@ -6,11 +6,6 @@ The fully-discrete Lyapunov consistent discretizations are designed for systems 
 
 # Visualization of temporal-spatial epidemiology and oncolytic M1 virotherapy model 
 
- <img width="1156" alt="brain-tumor" src="https://github.com/aanslab-papers/2023-fully-discrete-lyapunov-consistent-discretizations/assets/57997893/9ac7aad2-7f26-4eb1-bd2c-42fc852ec2da">
- 
-**Sample of the MRI images used to create the mesh and illustration of the mesh and tumor structure. The total number of hexahedral elements is $\approx 3.2899\times 10^6$, and the
-number of DOFs is $\approx 18.9496 \times 10^6$.**
-
 https://github.com/aanslab-papers/2023-fully-discrete-lyapunov-consistent-discretizations/assets/57997893/b592a503-6113-40bb-a629-a0027ae742f6
 
  **Brain tumor regression response to oncolytic M1 virotherapy**
