@@ -7,6 +7,7 @@ The fully-discrete Lyapunov consistent discretizations are designed for systems 
 # Visualization of temporal-spatial epidemiology and oncolytic M1 virotherapy model 
 
  **Brain tumor regression response to oncolytic M1 virotherapy**
+
 https://github.com/aanslab-papers/2023-fully-discrete-lyapunov-consistent-discretizations/assets/57997893/4aa8ef64-38b0-4bf3-9d8c-f3e80f2da0e4
 
  **The susceptible–infected (SI) PDE model**
