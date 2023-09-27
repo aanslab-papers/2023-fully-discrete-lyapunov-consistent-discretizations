@@ -4,6 +4,14 @@
 
 The fully-discrete Lyapunov consistent discretizations are designed for systems of parabolic reaction-diffusion equations. These discretizations preserve the stability of the equilibrium points of the continuous partial differential equations. The spatial discretization is based on summation-by-parts operators and simultaneous approximation terms for unstructured grids, while the temporal integration relies on relaxation Runge-Kutta methods. The discretizations are arbitrarily high-order accurate in space and time and can be used with h- and p-refinements. The algorithms have been successfully applied to epidemiology compartmental models for disease transmission and an oncolytic M1 virotherapy model. The source codes to simulate the susceptible–infected (SI) PDE model, susceptible-exposed-infectious (SEI) PDE model, and the Oncolytic M1 virotherapy PDE model reported in the manuscript can be found in this repository.
 
+# Visualization of temporal-spatial epidemiology and oncolytic M1 virotherapy model 
+
+ **Brain tumor regression response to oncolytic M1 virotherapy**
+https://github.com/aanslab-papers/2023-fully-discrete-lyapunov-consistent-discretizations/assets/57997893/4aa8ef64-38b0-4bf3-9d8c-f3e80f2da0e4
+
+ **The susceptible–infected (SI) PDE model**
+
+
 In the following, we provide the command line options of the SSDC library integrated with PETSc to execute the codes. Users can leverage these options to customize various aspects such as mesh handling, visualization, time stepping, adaptivity, and monitoring.
 
 # Code Execution
