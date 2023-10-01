@@ -9,10 +9,12 @@ The fully-discrete Lyapunov consistent discretizations are designed for systems 
 https://github.com/aanslab-papers/2023-fully-discrete-lyapunov-consistent-discretizations/assets/57997893/b592a503-6113-40bb-a629-a0027ae742f6
 
  **Brain tumor regression response to oncolytic M1 virotherapy**
+ 
+https://github.com/aanslab-papers/2023-fully-discrete-lyapunov-consistent-discretizations/assets/57997893/967e0077-3047-44b1-8301-3a13a005d4f8
+ 
 
  **The susceptible–infected (SI) PDE model**
-
-
+ 
 In the following, we provide the command line options of the SSDC library integrated with PETSc to execute the codes. Users can leverage these options to customize various aspects such as mesh handling, visualization, time stepping, adaptivity, and monitoring.
 
 # Code Execution
