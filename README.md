@@ -10,6 +10,7 @@ https://github.com/aanslab-papers/2023-fully-discrete-lyapunov-consistent-discre
 
  **Brain tumor regression response to oncolytic M1 virotherapy**
  
+ https://github.com/aanslab-papers/2023-fully-discrete-lyapunov-consistent-discretizations/assets/57997893/b855ae2f-1f35-46b2-8076-262b2219b6f3
 
  **The susceptible–infected (SI) PDE model**
  
