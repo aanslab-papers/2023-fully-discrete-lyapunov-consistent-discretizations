@@ -6,17 +6,22 @@ The fully-discrete Lyapunov consistent discretizations are designed for systems 
 
 # Visualization of temporal-spatial epidemiology and oncolytic M1 virotherapy model:
 
+The MRI images are used to create the mesh for the cerebrum, the cerebellum, and the brainstem. The mesh comprises approximately 3.3 million hexahedral elements with around 19 million degrees of freedom (DOFs). The computational power required for this study was provided by the Shaheen XC40 supercomputer hosted at KAUST, utilizing 4096 cores.
+
 https://github.com/aanslab-papers/2023-fully-discrete-lyapunov-consistent-discretizations/assets/57997893/6e0a08c7-283b-4e86-bb6e-4871d7b2c9b0
 
+## Brain tumor regression response to oncolytic M1 virotherapy
+ 
 https://github.com/aanslab-papers/2023-fully-discrete-lyapunov-consistent-discretizations/assets/57997893/b592a503-6113-40bb-a629-a0027ae742f6
 
- **Brain tumor regression response to oncolytic M1 virotherapy**
- 
+## The susceptible–infected (SI) PDE model
+
 [ https://github.com/aanslab-papers/2023-fully-discrete-lyapunov-consistent-discretizations/assets/57997893/b855ae2f-1f35-46b2-8076-262b2219b6f3](https://github.com/aanslab-papers/2023-fully-discrete-lyapunov-consistent-discretizations/assets/57997893/9dd1c451-65a5-4b9b-b54d-a5c3337a7cec)
 
- **The susceptible–infected (SI) PDE model:** The contour plots presented depict the emergence of Turing patterns in populations afflicted with infections (I) when the epidemiological parameter is set at 1.14.
+ The contour plots presented depict the emergence of Turing patterns in populations afflicted with infections (I) when the epidemiological parameter is set at 1.14.
+
  
-In the following, we provide the command line options of the SSDC library integrated with PETSc to execute the codes. Users can leverage these options to customize various aspects such as mesh handling, visualization, time stepping, adaptivity, and monitoring.
+ In the following, we provide the command line options of the SSDC library integrated with PETSc to execute the codes. Users can leverage these options to customize various aspects such as mesh handling, visualization, time stepping, adaptivity, and monitoring.
 
 # Code Execution
 
