@@ -12,7 +12,7 @@ https://github.com/aanslab-papers/2023-fully-discrete-lyapunov-consistent-discre
  
  https://github.com/aanslab-papers/2023-fully-discrete-lyapunov-consistent-discretizations/assets/57997893/b855ae2f-1f35-46b2-8076-262b2219b6f3
 
- **The susceptible–infected (SI) PDE model**
+ **The susceptible–infected (SI) PDE model:** The contour plots presented depict the emergence of Turing patterns in populations afflicted with infections (I) when the epidemiological parameter is set at 1.14.
  
 In the following, we provide the command line options of the SSDC library integrated with PETSc to execute the codes. Users can leverage these options to customize various aspects such as mesh handling, visualization, time stepping, adaptivity, and monitoring.
 
