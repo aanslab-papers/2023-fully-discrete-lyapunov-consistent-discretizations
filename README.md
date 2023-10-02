@@ -10,7 +10,7 @@ https://github.com/aanslab-papers/2023-fully-discrete-lyapunov-consistent-discre
 
  **Brain tumor regression response to oncolytic M1 virotherapy**
  
- https://github.com/aanslab-papers/2023-fully-discrete-lyapunov-consistent-discretizations/assets/57997893/b855ae2f-1f35-46b2-8076-262b2219b6f3
+[ https://github.com/aanslab-papers/2023-fully-discrete-lyapunov-consistent-discretizations/assets/57997893/b855ae2f-1f35-46b2-8076-262b2219b6f3](https://github.com/aanslab-papers/2023-fully-discrete-lyapunov-consistent-discretizations/assets/57997893/9dd1c451-65a5-4b9b-b54d-a5c3337a7cec)
 
  **The susceptible–infected (SI) PDE model:** The contour plots presented depict the emergence of Turing patterns in populations afflicted with infections (I) when the epidemiological parameter is set at 1.14.
  
