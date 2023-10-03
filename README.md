@@ -7,7 +7,7 @@ The fully-discrete Lyapunov consistent discretizations are designed for systems 
 # Visualization of temporal-spatial epidemiology and oncolytic M1 virotherapy model:
 
 ## Brain tumor regression response to oncolytic M1 virotherapy
-The MRI images are used to create the mesh for the cerebrum, the cerebellum, and the brainstem. The mesh comprises approximately 3.3 million hexahedral elements with around 19 million degrees of freedom (DOFs). The computational power required for this study was provided by the Shaheen XC40 supercomputer hosted at KAUST, utilizing 4096 cores.
+The MRI images of a young male are used to create the mesh for the cerebrum, the cerebellum, and the brainstem. The mesh comprises approximately 3.3 million hexahedral elements with around 19 million degrees of freedom (DOFs). The computational power required for this study was provided by the Shaheen XC40 supercomputer hosted at KAUST, utilizing 4096 cores.
 
 https://github.com/aanslab-papers/2023-fully-discrete-lyapunov-consistent-discretizations/assets/57997893/6e0a08c7-283b-4e86-bb6e-4871d7b2c9b0
 
